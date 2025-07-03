@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
+const verifyToken = require("../middleware/auth");
 const { 
   uploadPDFAndGeneratePodcast, 
   getMyPodcasts, 
@@ -21,9 +22,8 @@ const upload = multer({
   }
 });
 
-// Routes
-router.post("/upload", upload.single("pdf"), uploadPDFAndGeneratePodcast);
-router.get("/my-podcasts", getMyPodcasts);
-router.get("/podcast/:id", getPodcastById);
+router.post("/upload", verifyToken, upload.single("pdf"), uploadPDFAndGeneratePodcast);
+router.get("/my-podcasts", verifyToken, getMyPodcasts);
+router.get("/podcast/:id", verifyToken, getPodcastById);
 
 module.exports = router;
