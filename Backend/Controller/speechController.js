@@ -44,6 +44,8 @@ Create a natural, engaging conversation (2,500-4,000 words) that sounds like a k
 
 Content to transform: ${clippedText}
 
+And Dont add asterics or any other formatting, just return the text as a podcast script.
+
 Return ONLY the podcast script text with emotional annotations, no JSON formatting.`;
 
     const response = await groqClient.post("https://api.groq.com/openai/v1/chat/completions", {
@@ -64,7 +66,7 @@ Return ONLY the podcast script text with emotional annotations, no JSON formatti
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
       {
         text: scriptText,
-        model_id: "eleven_monolingual_v1",
+        model_id: "eleven_multilingual_v2",
         voice_settings: {
           stability: 0.5,
           similarity_boost: 0.8,
@@ -88,7 +90,6 @@ Return ONLY the podcast script text with emotional annotations, no JSON formatti
     const tempPath = path.join(tempDir, `${Date.now()}.mp3`);
     fs.writeFileSync(tempPath, ttsResponse.data);
 
-    // Upload to Cloudinary
     const uploadRes = await cloudinary.uploader.upload(tempPath, {
       resource_type: "video",
       folder: "eduai/audio",
@@ -204,6 +205,39 @@ exports.getPodcastById = async (req, res) => {
     });
   } catch (error) {
     console.error("Get Podcast Error:", error);
+    return res.status(500).json({
+      error: "Server Error",
+      details: error.message,
+    });
+  }
+};
+
+exports.deletePodcast = async (req, res) => {
+  try {
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ error: "User authentication required" });
+    }
+
+    const { id } = req.params;
+    const podcast = await Speech.findOneAndDelete({ 
+      _id: id, 
+      userId: req.user._id 
+    });
+
+    if (!podcast) {
+      return res.status(404).json({ error: "Podcast not found" });
+    }
+
+    if (podcast.audioUrl) {
+      const publicId = path.basename(podcast.audioUrl, path.extname(podcast.audioUrl));
+      await cloudinary.uploader.destroy(`eduai/audio/${publicId}`, { resource_type: "video" });
+    }
+
+    return res.status(200).json({
+      message: "Podcast deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete Podcast Error:", error);
     return res.status(500).json({
       error: "Server Error",
       details: error.message,

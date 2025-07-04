@@ -21,3 +21,12 @@ export const getChatHistory = async (token) => {
   });
   return res.data; 
 };
+
+export const deleteChat = async (token) => {
+  const res = await axiosClient.get("/chat/delete/:sessionId", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return res.data; 
+};

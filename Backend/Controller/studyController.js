@@ -154,3 +154,87 @@ Return this exact JSON structure **ONLY**:
     res.status(500).json({ error: "Failed to generate study plan" });
   }
 };
+
+
+exports.getStudyPlanById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id || req.user?._id || req.user.userId; 
+
+    if (!userId) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
+
+    const studyPlan = await StudyPlan.findOne({ _id: id, userId });
+
+    if (!studyPlan) {
+      return res.status(404).json({ error: "Study plan not found" });
+    }
+
+    return res.status(200).json({
+      message: "Study plan retrieved successfully",
+      plan: studyPlan.planData,
+      topics: studyPlan.topics,
+      deadlineDays: studyPlan.deadlineDays,
+      hoursPerDay: studyPlan.hoursPerDay,
+    });
+
+  } catch (error) {
+    console.error("Get Study Plan Error:", error);
+    return res.status(500).json({ error: "Failed to retrieve study plan" });
+  }
+}
+
+exports.getAllStudyPlans = async (req, res) => {
+  try{
+    const userId = req.user?.id || req.user?._id || req.user.userId; 
+
+    if (!userId) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
+
+    const studyPlans = await StudyPlan.find({ userId }).sort({ createdAt: -1 });
+
+    if (studyPlans.length === 0) {
+      return res.status(404).json({ message: "No study plans found" });
+    }
+
+    return res.status(200).json({
+      message: "Study plans retrieved successfully",
+      plans: studyPlans.map(plan => ({
+        id: plan._id,
+        topics: plan.topics,
+        deadlineDays: plan.deadlineDays,
+        hoursPerDay: plan.hoursPerDay,
+        createdAt: plan.createdAt,
+      })),
+    });
+  }
+  catch(error){
+    console.error("Get All Study Plans Error:", error);
+    return res.status(500).json({ error: "Failed to retrieve study plans" });
+  }
+}
+
+exports.deleteStudyPlan = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id || req.user?._id || req.user.userId; 
+
+    if (!userId) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
+
+    const deletedPlan = await StudyPlan.findOneAndDelete({ _id: id, userId });
+
+    if (!deletedPlan) {
+      return res.status(404).json({ error: "Study plan not found or access denied" });
+    }
+
+    return res.status(200).json({ message: "Study plan deleted successfully" });
+
+  } catch (error) {
+    console.error("Delete Study Plan Error:", error);
+    return res.status(500).json({ error: "Failed to delete study plan" });
+  }
+}

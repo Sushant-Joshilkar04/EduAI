@@ -62,19 +62,19 @@ const content = [
     ),
   },
   {
-    title: "Collaborative Learning Hub",
+    title: "PDF to Podcast Converter",
     description:
-      "Connect with thousands of students worldwide. Share study materials, join study groups, collaborate on projects, and learn together. Our platform creates a supportive community where knowledge sharing accelerates everyone's learning journey.",
+      "Transform any PDF document into an engaging podcast instantly. Simply upload your PDF and our AI will convert it into a natural-sounding audio experience. Perfect for learning on-the-go - listen to your study materials during commutes, workouts, or whenever reading isn't convenient.",
     content: (
-      <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(to_bottom_right,var(--cyan-500),var(--emerald-500))] text-white">
+      <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(to_bottom_right,var(--pink-500),var(--violet-500))] text-white">
         <div className="text-center p-8">
           <div className="mb-4">
             <svg className="w-16 h-16 mx-auto mb-4" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/>
+              <path d="M18 3a1 1 0 00-1.196-.98l-10 2A1 1 0 006 5v9.114A4.369 4.369 0 005 14c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V7.82l8-1.6v5.894A4.37 4.37 0 0015 12c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V3z"/>
             </svg>
           </div>
-          <h3 className="text-2xl font-bold mb-2">StudyAI Community</h3>
-          <p className="text-sm opacity-90">24,945+ active learners</p>
+          <h3 className="text-2xl font-bold mb-2">PDF to Podcast</h3>
+          <p className="text-sm opacity-90">3,847+ documents converted</p>
         </div>
       </div>
     ),

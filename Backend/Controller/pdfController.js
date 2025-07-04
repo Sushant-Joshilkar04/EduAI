@@ -220,3 +220,31 @@ exports.getDataById = async (req, res) => {
     return res.status(500).json({ error: "Failed to retrieve document" });
   }
 };
+
+exports.deleteDocument = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ error: "Document ID is required" });
+    }
+
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ error: "User authentication required" });
+    }
+
+    const document = await Document.findOneAndDelete({ 
+      _id: id, 
+      userId: req.user._id 
+    });
+
+    if (!document) {
+      return res.status(404).json({ error: "Document not found or access denied" });
+    }
+
+    return res.status(200).json({ message: "Document deleted successfully" });
+  } catch (error) {
+    console.error("Delete Document Error:", error.message);
+    return res.status(500).json({ error: "Failed to delete document" });
+  }
+};

@@ -28,3 +28,12 @@ export const getMyDocuments = async (token) => {
   });
   return res.data; 
 };
+
+export const deleteDocument = async (token) => {
+  const res = await axiosClient.get("/pdf/delete/:id", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return res.data; 
+};

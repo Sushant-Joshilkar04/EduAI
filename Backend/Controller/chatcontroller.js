@@ -44,3 +44,15 @@ exports.ask = async (req, res) => {
     res.status(500).json({ error: "AI Tutor failed" });
   }
 };
+
+exports.deleteChat = async (req, res) => {  
+  const { sessionId } = req.params;
+
+  try {
+    await Chat.findOneAndDelete({ userId: req.user._id, sessionId });
+    res.status(200).json({ message: "Chat deleted successfully" });
+  } catch (err) {
+    console.error("Delete Chat Error:", err.message);
+    res.status(500).json({ error: "Failed to delete chat" });
+  }
+}

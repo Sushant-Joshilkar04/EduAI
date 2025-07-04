@@ -4,7 +4,7 @@ const multer = require("multer");
 const cloudinary = require("../utils/cloudinary");
 const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const verifyToken = require("../middleware/auth");
-const { uploadPDFAndGenerateAI,getMyDocuments,getDataById } = require("../Controller/pdfController");
+const { uploadPDFAndGenerateAI,getMyDocuments,getDataById,deleteDocument } = require("../Controller/pdfController");
 
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
@@ -53,6 +53,7 @@ const handleUpload = (req, res, next) => {
 router.post("/upload", verifyToken,handleUpload, uploadPDFAndGenerateAI);
 router.get("/data/:id", verifyToken,getDataById);
 router.get("/mydocs", verifyToken,getMyDocuments);
+router.delete("/delete/:id", verifyToken, deleteDocument);
 
 
 module.exports = router;
