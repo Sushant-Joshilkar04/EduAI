@@ -13,7 +13,8 @@ exports.getHistory = async (req, res) => {
 exports.ask = async (req, res) => {
   const { message, context, sessionId } = req.body;
 
-  const prompt = `You're a helpful AI tutor. Given the following user doubt and context, respond clearly and concisely.Context (if any):${context || "None"}Question:${message}Answer:`;
+  const prompt = `You're a helpful AI tutor. Given the following user doubt and context, respond clearly and concisely.Context (if any):${context || "None"}Question:${message}Answer:
+  Note: Do not use asterisks or formatting marks in the response`;
 
   
 

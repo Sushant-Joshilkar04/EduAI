@@ -36,49 +36,51 @@ exports.uploadPDFAndGenerateAI = async (req, res) => {
 
     const prompt = `Analyze the following study material and create comprehensive learning resources: ${clippedText}
 
-    Generate a JSON response with these study components:
+Generate a JSON response with these study components:
 
-    1. **Summary**: Extract 5-7 key concepts that capture the main ideas and important details
-    2. **Flashcards**: Create 8-12 focused question-answer pairs covering:
-   - Key definitions and terminology
-   - Important facts and figures  
-   - Cause-and-effect relationships
-   - Main concepts and principles
-    3. **Multiple Choice Questions**: Generate 4-6 questions testing:
-   - Comprehension of main ideas
-   - Application of concepts
-   - Analysis of relationships between ideas
+1. Summary: Extract 5-7 key concepts that capture the main ideas and important details
+2. Flashcards: Create 8-12 focused question-answer pairs covering:
+  - Key definitions and terminology
+  - Important facts and figures  
+  - Cause-and-effect relationships
+  - Main concepts and principles
+3. Multiple Choice Questions: Generate 4-6 questions testing:
+  - Comprehension of main ideas
+  - Application of concepts
+  - Analysis of relationships between ideas
 
-    Format as valid JSON:
-    {
-    "summary": [
-    "Key point covering main concept 1",
-    "Important detail or principle 2", 
-    "Critical information point 3",
-    "Essential concept or relationship 4",
-    "Significant fact or conclusion 5"
-  ],
-  "flashcards": [
-    {"question": "Clear, specific question", "answer": "Concise, accurate answer"},
-    {"question": "Definition or concept question", "answer": "Complete explanation"},
-    {"question": "Application or example question", "answer": "Detailed response with context"}
-  ],
-  "mcqs": [
-    {
-      "question": "Test understanding of key concept",
-      "options": ["Correct answer", "Plausible distractor", "Related but incorrect", "Clear incorrect option"],
-      "correct_answer": 0,
-      "explanation": "Brief explanation of why this answer is correct"
-    }
-  ]
+Format as valid JSON:
+{
+ "summary": [
+   "Key point covering main concept 1",
+   "Important detail or principle 2", 
+   "Critical information point 3",
+   "Essential concept or relationship 4",
+   "Significant fact or conclusion 5"
+ ],
+ "flashcards": [
+   {"question": "Clear, specific question", "answer": "Concise, accurate answer"},
+   {"question": "Definition or concept question", "answer": "Complete explanation"},
+   {"question": "Application or example question", "answer": "Detailed response with context"}
+ ],
+ "mcqs": [
+   {
+     "question": "Test understanding of key concept",
+     "options": ["Correct answer", "Plausible distractor", "Related but incorrect", "Clear incorrect option"],
+     "correct_answer": 0,
+     "explanation": "Brief explanation of why this answer is correct"
+   }
+ ]
 }
 
-    Requirements:
-   - Make flashcards specific and testable
-   - Ensure MCQ distractors are plausible but clearly incorrect
-   - Cover different difficulty levels from basic recall to application
-   - Focus on the most important and testable content
-   - Return only valid JSON, no additional text.`;
+Requirements:
+- Make flashcards specific and testable
+- Ensure MCQ distractors are plausible but clearly incorrect
+- Cover different difficulty levels from basic recall to application
+- Focus on the most important and testable content
+- Do not use asterisks or formatting marks in the response
+- Generate flashcards, summary and quiz based solely on the provided data
+- Return only valid JSON, no additional text`;
 
     const response = await groqClient.post("https://api.groq.com/openai/v1/chat/completions", {
       model: "llama3-8b-8192",
@@ -88,8 +90,6 @@ exports.uploadPDFAndGenerateAI = async (req, res) => {
     });
 
     const aiOutput = response.data.choices[0].message.content;
-
-    // console.log(aiOutput);
     
 
     let parsedAIOutput;
