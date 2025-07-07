@@ -8,9 +8,8 @@ import {
   Upload as UploadIcon, ChevronDown, ChevronUp, RotateCcw, Check, X 
 } from "lucide-react";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import { uploadPDF, getMyDocuments, getDocumentById } from "@/api/pdf";
+import { uploadPDF, getMyDocuments, getDocumentById, deleteDocument } from "@/api/pdf";
 
-// Spotlight Card Component
 const SpotlightCard = ({ children, className = "", spotlight = true }) => {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isHovering, setIsHovering] = useState(false);
@@ -24,7 +23,6 @@ const SpotlightCard = ({ children, className = "", spotlight = true }) => {
   };
 
   return (
-    
     <div
       className={`group relative overflow-hidden rounded-xl border border-gray-800 bg-gray-900/50 backdrop-blur-sm transition-all duration-300 hover:border-gray-700 ${className}`}
       onMouseMove={handleMouseMove}
@@ -276,10 +274,17 @@ const AIContentDisplay = ({ aiData }) => {
 };
 
 // Previous Uploads Dropdown
-const PreviousUploadsDropdown = ({ documents, onSelectDocument, loading }) => {
+const PreviousUploadsDropdown = ({ documents, onSelectDocument, onDeleteDocument, loading }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   if (documents.length === 0) return null;
+
+  const handleDelete = async (e, docId) => {
+    e.stopPropagation();
+    if (window.confirm('Are you sure you want to delete this document?')) {
+      await onDeleteDocument(docId);
+    }
+  };
 
   return (
     <div className="relative">
@@ -295,26 +300,37 @@ const PreviousUploadsDropdown = ({ documents, onSelectDocument, loading }) => {
       {isOpen && (
         <div className="absolute top-full left-0 right-0 mt-2 bg-gray-900 border border-gray-700 rounded-lg shadow-xl z-10 max-h-60 overflow-y-auto">
           {documents.map((doc) => (
-            <button
+            <div
               key={doc.id}
-              onClick={() => {
-                onSelectDocument(doc);
-                setIsOpen(false);
-              }}
-              className="w-full text-left px-4 py-3 hover:bg-gray-800/50 transition-colors border-b border-gray-800 last:border-b-0"
+              className="flex items-center justify-between hover:bg-gray-800/50 transition-colors border-b border-gray-800 last:border-b-0"
             >
-              <div className="flex items-center gap-3">
-                <FileText className="w-4 h-4 text-blue-400 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-white text-sm font-medium truncate">
-                    {doc.name || doc.filename || 'Untitled Document'}
-                  </p>
-                  <p className="text-gray-400 text-xs">
-                    {new Date(doc.createdAt || doc.uploadDate || new Date()).toLocaleDateString()}
-                  </p>
+              <button
+                onClick={() => {
+                  onSelectDocument(doc);
+                  setIsOpen(false);
+                }}
+                className="flex-1 text-left px-4 py-3"
+              >
+                <div className="flex items-center gap-3">
+                  <FileText className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white text-sm font-medium truncate">
+                      {doc.name || doc.filename || 'Untitled Document'}
+                    </p>
+                    <p className="text-gray-400 text-xs">
+                      {new Date(doc.createdAt || doc.uploadDate || new Date()).toLocaleDateString()}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </button>
+              </button>
+              <button
+                onClick={(e) => handleDelete(e, doc.id)}
+                className="p-2 mr-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
+                title="Delete document"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
           ))}
         </div>
       )}
@@ -330,8 +346,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [processingAI, setProcessingAI] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [formData, setformData] = useState(true);
-
+  const [deleting, setDeleting] = useState(null);
 
   // Load previous documents on component mount
   useEffect(() => {
@@ -359,65 +374,84 @@ export default function HomePage() {
     
     if (files.length > 0) {
       const file = files[0];
+      try {
+        setProcessingAI(true);
+        const formData = new FormData();
+        formData.append('pdf', file);
+        
+        const token = localStorage.getItem('token');
+        
+        if (token) {
+          const result = await uploadPDF(formData, token);
+          
+          setSelectedDocument({
+            id: result._id,
+            name: result.fileName || file.name,
+            filename: result.fileName || file.name,
+            fileUrl: result.fileUrl,
+            createdAt: new Date().toISOString()
+          });
+          
+          if (result.aiContent) {
+            setAiData(result.aiContent);
+          }
+          
+          await loadDocuments();
+        }
+      } catch (error) {
+        console.error('Error uploading file:', error);
+        alert('Error uploading file. Please try again.');
+      } finally {
+        setProcessingAI(false);
+      }
+    }
+  };
+
+  const handleSelectDocument = async (document) => {
     try {
       setProcessingAI(true);
-      const formData = new FormData();
-      formData.append('pdf', file);
-      
       const token = localStorage.getItem('token');
-      // console.log(token);
-      
       if (token) {
-        const result = await uploadPDF(formData, token);
+        const docData = await getDocumentById(document.id, token);
+        setSelectedDocument(docData);
         
-        setSelectedDocument({
-          id: result._id,
-          name: result.fileName || file.name,
-          filename: result.fileName || file.name,
-          fileUrl: result.fileUrl,
-          createdAt: new Date().toISOString()
-        });
-        
-        if (result.aiContent) {
-          setAiData(result.aiContent);
+        if (docData.aiContent) {
+          setAiData(docData.aiContent);
+        } else {
+          setAiData(null);
         }
-        
-        await loadDocuments();
       }
     } catch (error) {
-      console.error('Error uploading file:', error);
-      // Add user-friendly error handling
-      alert('Error uploading file. Please try again.');
+      console.error('Error fetching document:', error);
+      alert('Error loading document. Please try again.');
     } finally {
       setProcessingAI(false);
     }
-  }
-};
-    
-  
+  };
 
-  const handleSelectDocument = async (document) => {
-  try {
-    setProcessingAI(true);
-    const token = localStorage.getItem('token');
-    if (token) {
-      const docData = await getDocumentById(document.id, token);
-      setSelectedDocument(docData);
-      
-      // Set AI data from response
-      if (docData.aiContent) {
-        setAiData(docData.aiContent);
-      } else {
-        setAiData(null);
+  const handleDeleteDocument = async (documentId) => {
+    try {
+      setDeleting(documentId);
+      const token = localStorage.getItem('token');
+      if (token) {
+        await deleteDocument(documentId, token);
+        
+        // If the deleted document is currently selected, clear the selection
+        if (selectedDocument && selectedDocument.id === documentId) {
+          setSelectedDocument(null);
+          setAiData(null);
+        }
+        
+        // Reload documents list
+        await loadDocuments();
       }
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      alert('Error deleting document. Please try again.');
+    } finally {
+      setDeleting(null);
     }
-  } catch (error) {
-    console.error('Error fetching document:', error);
-    alert('Error loading document. Please try again.');
-  } finally {
-    setProcessingAI(false);
-  }
-};
+  };
 
   const resetToUpload = () => {
     setFiles([]);
@@ -427,129 +461,144 @@ export default function HomePage() {
 
   return (
     <ProtectedRoute>
-    <div className="flex h-screen bg-gray-950">
-      <div className={sidebarOpen ? "w-[270px] min-w-[220px] max-w-xs transition-all duration-300" : "w-[60px] min-w-[60px] max-w-[60px] transition-all duration-300 sticky top-0 h-screen"}>
-        <SidebarDemo open={sidebarOpen} setOpen={setSidebarOpen} />
-      </div>
-      
-      <div className="flex-1 overflow-auto">
-        <div className="w-full mx-auto min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950">
-          {/* Header Section */}
-          <div className="bg-gray-900/50 backdrop-blur-sm border-b border-gray-800 p-4 sm:p-6 md:p-8 lg:p-10 text-center">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white mb-3 sm:mb-4 md:mb-6">
-              AI-Powered Study Assistant
-            </h1>
-            <p className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold text-gray-300 mb-4 sm:mb-5 md:mb-6 lg:mb-8 px-2">
-              Upload PDFs &lt;10MB → AI generates quizzes, flashcards, summaries
-            </p>
-            <div className="flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-4 md:gap-6 lg:gap-8 text-gray-400">
-              <div className="flex items-center gap-2">
-                <Brain className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-blue-400" />
-                <span className="font-medium text-sm sm:text-base md:text-lg">Smart Quizzes</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-purple-400" />
-                <span className="font-medium text-sm sm:text-base md:text-lg">Flashcards</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Zap className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-yellow-400" />
-                <span className="font-medium text-sm sm:text-base md:text-lg">Quick Summaries</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="p-4 sm:p-6 md:p-8">
-            {/* File Upload Section */}
-            <div className="mb-8">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-                <h2 className="text-xl sm:text-2xl font-bold text-white mb-2 sm:mb-0">
-                  Upload Document
-                </h2>
-                <div className="flex items-center gap-4">
-                  <PreviousUploadsDropdown 
-                    documents={documents}
-                    onSelectDocument={handleSelectDocument}
-                    loading={loading}
-                  />
-                  {selectedDocument && (
-                    <button
-                      onClick={resetToUpload}
-                      className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm"
-                    >
-                      <UploadIcon className="w-4 h-4" />
-                      New Upload
-                    </button>
-                  )}
+      <div className="flex h-screen bg-gray-950">
+        <div className={sidebarOpen ? "w-[270px] min-w-[220px] max-w-xs transition-all duration-300" : "w-[60px] min-w-[60px] max-w-[60px] transition-all duration-300 sticky top-0 h-screen"}>
+          <SidebarDemo open={sidebarOpen} setOpen={setSidebarOpen} />
+        </div>
+        
+        <div className="flex-1 overflow-auto">
+          <div className="w-full mx-auto min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950">
+            {/* Header Section */}
+            <div className="bg-gray-900/50 backdrop-blur-sm border-b border-gray-800 p-4 sm:p-6 md:p-8 lg:p-10 text-center">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white mb-3 sm:mb-4 md:mb-6">
+                AI-Powered Study Assistant
+              </h1>
+              <p className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold text-gray-300 mb-4 sm:mb-5 md:mb-6 lg:mb-8 px-2">
+                Upload PDFs &lt;10MB → AI generates quizzes, flashcards, summaries
+              </p>
+              <div className="flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-4 md:gap-6 lg:gap-8 text-gray-400">
+                <div className="flex items-center gap-2">
+                  <Brain className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-blue-400" />
+                  <span className="font-medium text-sm sm:text-base md:text-lg">Smart Quizzes</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-purple-400" />
+                  <span className="font-medium text-sm sm:text-base md:text-lg">Flashcards</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Zap className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-yellow-400" />
+                  <span className="font-medium text-sm sm:text-base md:text-lg">Quick Summaries</span>
                 </div>
               </div>
-              
-              {!selectedDocument && <FileUpload onChange={handleFileUpload} />}
-              
-              {selectedDocument && (
-                <SpotlightCard className="p-4 sm:p-6">
+            </div>
+
+            <div className="p-4 sm:p-6 md:p-8">
+              {/* File Upload Section */}
+              <div className="mb-8">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                  <h2 className="text-xl sm:text-2xl font-bold text-white mb-2 sm:mb-0">
+                    Upload Document
+                  </h2>
                   <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-lg bg-green-500/20 border border-green-500/30">
-                      <FileText className="w-6 h-6 text-green-400" />
-                    </div>
-                    <div>
-                      <h3 className="text-white font-semibold text-lg">
-                        {selectedDocument.name || selectedDocument.filename || 'Document'}
-                      </h3>
-                      <p className="text-gray-400 text-sm">
-                        AI processing completed • Ready for study
-                      </p>
-                    </div>
+                    <PreviousUploadsDropdown 
+                      documents={documents}
+                      onSelectDocument={handleSelectDocument}
+                      onDeleteDocument={handleDeleteDocument}
+                      loading={loading}
+                    />
+                    {selectedDocument && (
+                      <button
+                        onClick={resetToUpload}
+                        className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm"
+                      >
+                        <UploadIcon className="w-4 h-4" />
+                        New Upload
+                      </button>
+                    )}
                   </div>
-                </SpotlightCard>
+                </div>
+                
+                {!selectedDocument && <FileUpload onChange={handleFileUpload} />}
+                
+                {selectedDocument && (
+                  <SpotlightCard className="p-4 sm:p-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 rounded-lg bg-green-500/20 border border-green-500/30">
+                          <FileText className="w-6 h-6 text-green-400" />
+                        </div>
+                        <div>
+                          <h3 className="text-white font-semibold text-lg">
+                            {selectedDocument.name || selectedDocument.filename || 'Document'}
+                          </h3>
+                          <p className="text-gray-400 text-sm">
+                            AI processing completed • Ready for study
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteDocument(selectedDocument.id)}
+                        disabled={deleting === selectedDocument.id}
+                        className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-50"
+                        title="Delete document"
+                      >
+                        {deleting === selectedDocument.id ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-400"></div>
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
+                  </SpotlightCard>
+                )}
+              </div>
+
+              {/* Processing State */}
+              {processingAI && (
+                <div className="flex items-center justify-center p-8 mb-8">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                    <p className="text-gray-400">Processing document with AI...</p>
+                  </div>
+                </div>
+              )}
+
+              {/* AI Generated Content */}
+              {aiData && !processingAI && (
+                <div className="space-y-6">
+                  <h2 className="text-xl sm:text-2xl font-bold text-white">
+                    AI Generated Content
+                  </h2>
+                  <AIContentDisplay aiData={aiData} />
+                </div>
+              )}
+
+              {/* Loading State */}
+              {loading && (
+                <div className="flex items-center justify-center p-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                  <span className="ml-3 text-gray-400">Loading documents...</span>
+                </div>
               )}
             </div>
-
-            {/* Processing State */}
-            {processingAI && (
-              <div className="flex items-center justify-center p-8 mb-8">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-                  <p className="text-gray-400">Processing document with AI...</p>
-                </div>
-              </div>
-            )}
-
-            {/* AI Generated Content */}
-            {aiData && !processingAI && (
-              <div className="space-y-6">
-                <h2 className="text-xl sm:text-2xl font-bold text-white">
-                  AI Generated Content
-                </h2>
-                <AIContentDisplay aiData={aiData} />
-              </div>
-            )}
-
-            {/* Loading State */}
-            {loading && (
-              <div className="flex items-center justify-center p-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                <span className="ml-3 text-gray-400">Loading documents...</span>
-              </div>
-            )}
           </div>
         </div>
-      </div>
 
-      <style jsx>{`
-        .perspective-1000 {
-          perspective: 1000px;
-        }
-        .transform-style-preserve-3d {
-          transform-style: preserve-3d;
-        }
-        .backface-hidden {
-          backface-visibility: hidden;
-        }
-        .rotate-y-180 {
-          transform: rotateY(180deg);
-        }
-      `}</style>
-    </div>
+        <style jsx>{`
+          .perspective-1000 {
+            perspective: 1000px;
+          }
+          .transform-style-preserve-3d {
+            transform-style: preserve-3d;
+          }
+          .backface-hidden {
+            backface-visibility: hidden;
+          }
+          .rotate-y-180 {
+            transform: rotateY(180deg);
+          }
+        `}</style>
+      </div>
     </ProtectedRoute>
   );
 }

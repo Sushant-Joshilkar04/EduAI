@@ -29,8 +29,8 @@ export const getMyDocuments = async (token) => {
   return res.data; 
 };
 
-export const deleteDocument = async (token) => {
-  const res = await axiosClient.get("/pdf/delete/:id", {
+export const deleteDocument = async (id,token) => {
+  const res = await axiosClient.delete(`/pdf/delete/${id}`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },

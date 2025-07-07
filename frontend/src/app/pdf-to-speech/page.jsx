@@ -8,7 +8,7 @@ import {
   Upload, ChevronDown, ChevronUp, Check, X, Headphones, Mic
 } from "lucide-react";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import { getMyPodcasts, uploadPDFAndGeneratePodcast, getPodcastById } from "@/api/speech";
+import { getMyPodcasts, uploadPDFAndGeneratePodcast, getPodcastById, deletePodcast } from "@/api/speech";
 
 const SpotlightCard = ({ children, className = "", spotlight = true }) => {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
@@ -319,11 +319,26 @@ const SiriAudioPlayer = ({ audioUrl, title, onPlayerReady }) => {
   );
 };
 
-// Previous Podcasts Dropdown
-const PreviousPodcastsDropdown = ({ podcasts, onSelectPodcast, loading }) => {
+// Previous Podcasts Dropdown with Delete Functionality
+const PreviousPodcastsDropdown = ({ podcasts, onSelectPodcast, onDeletePodcast, loading }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   if (podcasts.length === 0) return null;
+
+  const handleDelete = async (e, podcastId) => {
+    e.stopPropagation(); // Prevent triggering the select action
+    if (confirm('Are you sure you want to delete this podcast?')) {
+      setDeletingId(podcastId);
+      try {
+        await onDeletePodcast(podcastId);
+      } catch (error) {
+        console.error('Error deleting podcast:', error);
+      } finally {
+        setDeletingId(null);
+      }
+    }
+  };
 
   return (
     <div className="relative">
@@ -339,26 +354,44 @@ const PreviousPodcastsDropdown = ({ podcasts, onSelectPodcast, loading }) => {
       {isOpen && (
         <div className="absolute top-full left-0 right-0 mt-2 bg-gray-900 border border-gray-700 rounded-lg shadow-xl z-10 max-h-60 overflow-y-auto">
           {podcasts.map((podcast) => (
-            <button
+            <div
               key={podcast.id}
-              onClick={() => {
-                onSelectPodcast(podcast);
-                setIsOpen(false);
-              }}
-              className="w-full text-left px-4 py-3 hover:bg-gray-800/50 transition-colors border-b border-gray-800 last:border-b-0"
+              className="relative group hover:bg-gray-800/50 transition-colors border-b border-gray-800 last:border-b-0"
             >
-              <div className="flex items-center gap-3">
-                <Mic className="w-4 h-4 text-purple-400 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-white text-sm font-medium truncate">
-                    {podcast.title || podcast.name || 'Untitled Podcast'}
-                  </p>
-                  <p className="text-gray-400 text-xs">
-                    {new Date(podcast.createdAt || podcast.uploadDate || new Date()).toLocaleDateString()}
-                  </p>
+              <button
+                onClick={() => {
+                  onSelectPodcast(podcast);
+                  setIsOpen(false);
+                }}
+                className="w-full text-left px-4 py-3 pr-12" // Add right padding for delete button
+              >
+                <div className="flex items-center gap-3">
+                  <Mic className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white text-sm font-medium truncate">
+                      {podcast.title || podcast.name || 'Untitled Podcast'}
+                    </p>
+                    <p className="text-gray-400 text-xs">
+                      {new Date(podcast.createdAt || podcast.uploadDate || new Date()).toLocaleDateString()}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </button>
+              </button>
+              
+              {/* Delete Button */}
+              <button
+                onClick={(e) => handleDelete(e, podcast.id)}
+                disabled={deletingId === podcast.id}
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 rounded-full bg-red-500/20 hover:bg-red-500/30 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
+                title="Delete podcast"
+              >
+                {deletingId === podcast.id ? (
+                  <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4 text-red-400" />
+                )}
+              </button>
+            </div>
           ))}
         </div>
       )}
@@ -441,6 +474,27 @@ export default function PodcastPlayerPage() {
     }
   };
 
+  const handleDeletePodcast = async (podcastId) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        await deletePodcast(podcastId, token);
+        
+        // If the currently selected podcast is being deleted, reset the selection
+        if (selectedPodcast && selectedPodcast.id === podcastId) {
+          setSelectedPodcast(null);
+        }
+        
+        // Reload the podcasts list
+        await loadPodcasts();
+      }
+    } catch (error) {
+      console.error('Error deleting podcast:', error);
+      alert('Error deleting podcast. Please try again.');
+      throw error; // Re-throw to handle in the dropdown component
+    }
+  };
+
   const resetToUpload = () => {
     setFiles([]);
     setSelectedPodcast(null);
@@ -490,6 +544,7 @@ export default function PodcastPlayerPage() {
                     <PreviousPodcastsDropdown 
                       podcasts={podcasts}
                       onSelectPodcast={handleSelectPodcast}
+                      onDeletePodcast={handleDeletePodcast}
                       loading={loading}
                     />
                     {selectedPodcast && (
@@ -535,7 +590,6 @@ export default function PodcastPlayerPage() {
                 </div>
               )}
 
-              {/* Siri-Style Audio Player */}
               {selectedPodcast && selectedPodcast.audioUrl && !processing && (
                 <SiriAudioPlayer 
                   audioUrl={selectedPodcast.audioUrl}
@@ -543,7 +597,6 @@ export default function PodcastPlayerPage() {
                 />
               )}
 
-              {/* Loading State */}
               {loading && (
                 <div className="flex items-center justify-center p-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>

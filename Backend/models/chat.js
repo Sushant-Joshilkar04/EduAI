@@ -19,6 +19,10 @@ const chatSchema = new mongoose.Schema({
     ref: "User",
     required: true,
   },
+  name: {
+    type: String,
+    default: "New Chat",
+  },
   sessionId: {
     type: String,
     default: () => new mongoose.Types.ObjectId().toString(),

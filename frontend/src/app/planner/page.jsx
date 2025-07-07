@@ -11,11 +11,11 @@ import {
 import "@xyflow/react/dist/style.css";
 import { ReactFlow } from "@xyflow/react";
 
-import { generateStudyPlan } from "@/api/planner"
+import { generateStudyPlan, getAllStudyPlans, getStudyPlanById, deleteStudyPlan } from "@/api/planner"
 import { SidebarDemo } from "@/components/Sidebar";
 
 export default function StudyPlanPage() {
-  const [sidebarOpen, setSidebarOpen] = useState(false); // Default closed on mobile
+  const [sidebarOpen, setSidebarOpen] = useState(false); 
   const [isMobile, setIsMobile] = useState(false);
 
   const [topics, setTopics] = useState("");
@@ -26,12 +26,17 @@ export default function StudyPlanPage() {
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
 
+  // New state for saved plans
+  const [savedPlans, setSavedPlans] = useState([]);
+  const [currentPlanId, setCurrentPlanId] = useState(null);
+  const [showSavedPlans, setShowSavedPlans] = useState(false);
+  const [loadingPlans, setLoadingPlans] = useState(false);
+
   // Check if device is mobile/tablet
   useEffect(() => {
     const checkDeviceType = () => {
       const isMobileDevice = window.innerWidth < 768;
       setIsMobile(isMobileDevice);
-      // Auto-close sidebar on mobile, open on desktop
       if (isMobileDevice) {
         setSidebarOpen(false);
       } else {
@@ -42,6 +47,11 @@ export default function StudyPlanPage() {
     checkDeviceType();
     window.addEventListener('resize', checkDeviceType);
     return () => window.removeEventListener('resize', checkDeviceType);
+  }, []);
+
+  // Load saved plans on component mount
+  useEffect(() => {
+    loadSavedPlans();
   }, []);
 
   const onNodesChange = useCallback(
@@ -56,6 +66,77 @@ export default function StudyPlanPage() {
     (params) => setEdges((eds) => addEdge(params, eds)),
     []
   );
+
+  // Load all saved study plans
+  const loadSavedPlans = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+      setLoadingPlans(true);
+      const res = await getAllStudyPlans(token);
+      setSavedPlans(res.plans || []);
+    } catch (err) {
+      console.error("Error loading saved plans:", err);
+    } finally {
+      setLoadingPlans(false);
+    }
+  };
+
+  // Load a specific study plan by ID
+  const loadStudyPlan = async (planId) => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+      setLoading(true);
+      const res = await getStudyPlanById(planId, token);
+      setNodes(res.plan.nodes || []);
+      setEdges(res.plan.edges || []);
+      setCurrentPlanId(planId);
+      
+      // Update form fields if plan data includes them
+      if (res.plan.topics) {
+        setTopics(res.plan.topics.join(", "));
+      }
+      if (res.plan.deadlineDays) {
+        setDeadlineDays(res.plan.deadlineDays);
+      }
+      if (res.plan.hoursPerDay) {
+        setHoursPerDay(res.plan.hoursPerDay);
+      }
+    } catch (err) {
+      console.error("Error loading study plan:", err);
+      alert("Failed to load study plan.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Delete a study plan
+  const handleDeletePlan = async (planId) => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    if (!confirm("Are you sure you want to delete this study plan?")) return;
+
+    try {
+      await deleteStudyPlan(planId, token);
+      setSavedPlans(prev => prev.filter(plan => plan.id !== planId));
+      
+      // Clear current plan if it was deleted
+      if (currentPlanId === planId) {
+        setNodes([]);
+        setEdges([]);
+        setCurrentPlanId(null);
+      }
+      
+      alert("Study plan deleted successfully!");
+    } catch (err) {
+      console.error("Error deleting study plan:", err);
+      alert("Failed to delete study plan.");
+    }
+  };
 
   const handleGenerate = async () => {
     const token = localStorage.getItem("token");
@@ -72,12 +153,26 @@ export default function StudyPlanPage() {
       );
       setNodes(res.plan.nodes || []);
       setEdges(res.plan.edges || []);
+      setCurrentPlanId(res.plan.id || null);
+      
+      // Refresh saved plans list
+      loadSavedPlans();
     } catch (err) {
       console.error("Error generating study plan:", err);
       alert("Failed to generate study plan. Please try again.");
     } finally {
       setLoading(false);
     }
+  };
+
+  // Clear current plan
+  const handleClearPlan = () => {
+    setNodes([]);
+    setEdges([]);
+    setCurrentPlanId(null);
+    setTopics("");
+    setDeadlineDays(7);
+    setHoursPerDay(2);
   };
 
   return (
@@ -132,6 +227,70 @@ export default function StudyPlanPage() {
           </p>
         </div>
 
+        {/* Saved Plans Section */}
+        <div className="bg-gray-900 rounded-xl border border-gray-800 p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-white text-lg font-semibold">Saved Plans</h2>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowSavedPlans(!showSavedPlans)}
+                className="text-blue-400 hover:text-blue-300 text-sm"
+              >
+                {showSavedPlans ? "Hide" : "Show"} ({savedPlans.length})
+              </button>
+              <button
+                onClick={loadSavedPlans}
+                disabled={loadingPlans}
+                className="text-green-400 hover:text-green-300 text-sm"
+              >
+                {loadingPlans ? "Loading..." : "Refresh"}
+              </button>
+            </div>
+          </div>
+
+          {showSavedPlans && (
+            <div className="space-y-2 max-h-40 overflow-y-auto">
+              {savedPlans.length === 0 ? (
+                <p className="text-gray-400 text-sm">No saved plans yet.</p>
+              ) : (
+                savedPlans.map((plan) => (
+                  <div
+                    key={plan.id}
+                    className={`flex items-center justify-between p-3 rounded-lg border ${
+                      currentPlanId === plan.id 
+                        ? 'bg-blue-900 border-blue-600' 
+                        : 'bg-gray-800 border-gray-700'
+                    }`}
+                  >
+                    <div className="flex-1">
+                      <h3 className="text-white text-sm font-medium">
+                        {plan.title || plan.topics?.join(", ") || "Untitled Plan"}
+                      </h3>
+                      <p className="text-gray-400 text-xs">
+                        {plan.createdAt ? new Date(plan.createdAt).toLocaleDateString() : ""}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => loadStudyPlan(plan.id)}
+                        className="text-blue-400 hover:text-blue-300 text-xs px-2 py-1 rounded"
+                      >
+                        Load
+                      </button>
+                      <button
+                        onClick={() => handleDeletePlan(plan.id)}
+                        className="text-red-400 hover:text-red-300 text-xs px-2 py-1 rounded"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Form */}
         <div className="space-y-4">
           <input
@@ -142,7 +301,6 @@ export default function StudyPlanPage() {
             className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-md bg-gray-800 text-white border border-gray-700 text-sm sm:text-base"
           />
           
-          {/* Responsive form inputs */}
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className="flex-1">
               <label className="block text-gray-400 text-xs sm:text-sm mb-1">
@@ -170,14 +328,31 @@ export default function StudyPlanPage() {
             </div>
           </div>
           
-          <button
-            onClick={handleGenerate}
-            disabled={loading}
-            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-md text-sm sm:text-base font-medium transition-colors"
-          >
-            {loading ? "Generating..." : "Generate Study Plan"}
-          </button>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={handleGenerate}
+              disabled={loading}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-md text-sm sm:text-base font-medium transition-colors"
+            >
+              {loading ? "Generating..." : "Generate Study Plan"}
+            </button>
+            <button
+              onClick={handleClearPlan}
+              className="flex-1 sm:flex-none bg-gray-600 hover:bg-gray-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-md text-sm sm:text-base font-medium transition-colors"
+            >
+              Clear
+            </button>
+          </div>
         </div>
+
+        {/* Current Plan Info */}
+        {currentPlanId && (
+          <div className="bg-green-900 border border-green-600 rounded-lg p-3">
+            <p className="text-green-200 text-sm">
+              📋 Currently viewing saved plan (ID: {currentPlanId})
+            </p>
+          </div>
+        )}
 
         {/* Flow Visualizer */}
         <div className="bg-gray-900 rounded-xl border border-gray-800 h-[400px] sm:h-[500px] md:h-[600px]">

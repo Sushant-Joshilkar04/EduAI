@@ -47,7 +47,8 @@ exports.ask = async (req, res) => {
 
 exports.deleteChat = async (req, res) => {  
   const { sessionId } = req.params;
-
+  console.log("I am in backend");
+  
   try {
     await Chat.findOneAndDelete({ userId: req.user._id, sessionId });
     res.status(200).json({ message: "Chat deleted successfully" });
@@ -56,3 +57,25 @@ exports.deleteChat = async (req, res) => {
     res.status(500).json({ error: "Failed to delete chat" });
   }
 }
+
+exports.updateChatName = async (req, res) => {
+  const { sessionId } = req.params;
+  const { name } = req.body;
+
+  try {
+    const updatedChat = await Chat.findOneAndUpdate(
+      { userId: req.user._id, sessionId },
+      { name },
+      { new: true }
+    );
+
+    if (!updatedChat) {
+      return res.status(404).json({ error: "Chat not found" });
+    }
+
+    res.status(200).json(updatedChat);
+  } catch (err) {
+    console.error("Update Chat Name Error:", err.message);
+    res.status(500).json({ error: "Failed to update chat name" });
+  }
+};

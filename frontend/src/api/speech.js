@@ -30,3 +30,12 @@ export const getPodcastById = async (id, token) => {
   });
   return res.data;
 };
+
+export const deletePodcast = async (id, token) => {
+  const res = await axiosClient.delete(`/speech/delete/${id}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return res.data;
+};

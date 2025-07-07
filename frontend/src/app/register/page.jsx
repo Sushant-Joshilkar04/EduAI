@@ -61,7 +61,6 @@ export default function Register() {
       alert("Registration successful! Please check your email for verification.");
       console.log('Registration submitted:', response);
 
-      // Clear form
       setFormData({
         firstName: '',
         lastName: '',

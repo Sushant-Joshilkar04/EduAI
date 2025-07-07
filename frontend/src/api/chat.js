@@ -22,11 +22,24 @@ export const getChatHistory = async (token) => {
   return res.data; 
 };
 
-export const deleteChat = async (token) => {
-  const res = await axiosClient.get("/chat/delete/:sessionId", {
+export const deleteChat = async (sessionId,token) => {
+  const res = await axiosClient.delete(`/chat/delete/${sessionId}`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
   });
+  return res.data; 
+};
+
+export const updateChatName = async (sessionId, newName, token) => {
+  const res = await axiosClient.put(
+    `/chat/update-name/${sessionId}`,
+    { name: newName },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
   return res.data; 
 };

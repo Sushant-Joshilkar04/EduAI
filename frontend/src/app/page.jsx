@@ -4,7 +4,7 @@ import HeroSection from '@/components/HeroSection';
 import StickyScroll from '@/components/Sticky_Scroll';
 import { AnimatedTestimonialsDemo } from '@/components/AnimatedTestimonials ';
 import { Footer7 } from '@/components/footer';
-
+import dynamic from 'next/dynamic';
 export default function HomePage() {
   return (
     <div>

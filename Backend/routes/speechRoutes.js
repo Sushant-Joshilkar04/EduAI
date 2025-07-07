@@ -4,7 +4,7 @@ const multer = require("multer");
 const verifyToken = require("../middleware/auth");
 const { 
   uploadPDFAndGeneratePodcast, 
-  getMyPodcasts, 
+  getMyPodcasts, deletePodcastById,
   getPodcastById 
 } = require("../Controller/speechController");
 
@@ -25,5 +25,6 @@ const upload = multer({
 router.post("/upload", verifyToken, upload.single("pdf"), uploadPDFAndGeneratePodcast);
 router.get("/my-podcasts", verifyToken, getMyPodcasts);
 router.get("/podcast/:id", verifyToken, getPodcastById);
+router.delete("/delete/:id", verifyToken, deletePodcastById);
 
 module.exports = router;

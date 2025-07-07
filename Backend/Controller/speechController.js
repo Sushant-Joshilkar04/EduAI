@@ -123,7 +123,6 @@ Return ONLY the podcast script text with emotional annotations, no JSON formatti
   } catch (error) {
     console.error("Podcast Generation Error:", error);
 
-    // Clean up files if they exist
     try {
       if (req.file && req.file.path && fs.existsSync(req.file.path)) {
         fs.unlinkSync(req.file.path);
@@ -244,3 +243,36 @@ exports.deletePodcast = async (req, res) => {
     });
   }
 };
+
+exports.deletePodcastById = async (req, res) => {
+  try {
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ error: "User authentication required" });
+    }
+
+    const { id } = req.params;
+    const podcast = await Speech.findOneAndDelete({ 
+      _id: id, 
+      userId: req.user._id 
+    });
+
+    if (!podcast) {
+      return res.status(404).json({ error: "Podcast not found" });
+    }
+
+    if (podcast.audioUrl) {
+      const publicId = path.basename(podcast.audioUrl, path.extname(podcast.audioUrl));
+      await cloudinary.uploader.destroy(`eduai/audio/${publicId}`, { resource_type: "video" });
+    }
+
+    return res.status(200).json({
+      message: "Podcast deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete Podcast Error:", error);
+    return res.status(500).json({
+      error: "Server Error",
+      details: error.message,
+    });
+  }
+}
