@@ -7,7 +7,7 @@ import {
   Brain, BookOpen, Zap, FileText, Calendar, Download, Eye, Trash2, 
   Upload as UploadIcon, ChevronDown, ChevronUp, RotateCcw, Check, X 
 } from "lucide-react";
-import ProtectedRoute from "../../components/";
+import ProtectedRoute from "../../components/ProtectedRoute";
 import { uploadPDF, getMyDocuments, getDocumentById, deleteDocument } from "@/api/pdf";
 
 const SpotlightCard = ({ children, className = "", spotlight = true }) => {
