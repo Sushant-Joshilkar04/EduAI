@@ -9,7 +9,6 @@ export default function VerifyEmail() {
 
   useEffect(() => {
     const verify = async () => {
-      // Get token from URL manually (client-side only)
       const params = new URLSearchParams(window.location.search);
       const token = params.get("token");
 

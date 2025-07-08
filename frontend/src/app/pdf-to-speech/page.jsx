@@ -7,7 +7,7 @@ import {
   Play, Pause, Square, RotateCcw, FileText, Calendar, Download, Eye, Trash2, 
   Upload, ChevronDown, ChevronUp, Check, X, Headphones, Mic
 } from "lucide-react";
-import ProtectedRoute from "../../components/ProtectedRoute";
+import ProtectedRoute from "../../api/Protected";
 import { getMyPodcasts, uploadPDFAndGeneratePodcast, getPodcastById, deletePodcast } from "@/api/speech";
 
 const SpotlightCard = ({ children, className = "", spotlight = true }) => {
