@@ -1,16 +1,18 @@
-"use client";
+'use client';
+
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import { verifyEmail } from "@/api/auth";
 
 export default function VerifyEmail() {
-  const searchParams = useSearchParams();
-  const token = searchParams.get("token");
   const [status, setStatus] = useState("Verifying...");
   const [isVerified, setIsVerified] = useState(false);
 
   useEffect(() => {
     const verify = async () => {
+      // Get token from URL manually (client-side only)
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get("token");
+
       if (!token) {
         setStatus("Invalid verification link. No token provided.");
         return;
@@ -21,13 +23,13 @@ export default function VerifyEmail() {
         setStatus("Email verified successfully! You can now login.");
         setIsVerified(true);
       } catch (error) {
-        console.error('Verification error:', error);
+        console.error("Verification error:", error);
         setStatus("Verification failed. Invalid or expired link.");
       }
     };
 
     verify();
-  }, [token]);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
@@ -36,7 +38,7 @@ export default function VerifyEmail() {
           <h1 className="text-2xl font-semibold text-white mb-4">
             Email Verification
           </h1>
-          
+
           <div className="mb-6">
             {status === "Verifying..." ? (
               <div className="flex items-center justify-center">
@@ -44,7 +46,7 @@ export default function VerifyEmail() {
                 <span className="text-white/70 ml-3">{status}</span>
               </div>
             ) : (
-              <p className={`text-lg ${isVerified ? 'text-green-400' : 'text-red-400'}`}>
+              <p className={`text-lg ${isVerified ? "text-green-400" : "text-red-400"}`}>
                 {status}
               </p>
             )}
@@ -52,7 +54,7 @@ export default function VerifyEmail() {
 
           {isVerified && (
             <button
-              onClick={() => window.location.href = '/login'}
+              onClick={() => (window.location.href = "/login")}
               className="w-full py-3 bg-white/90 text-gray-900 font-semibold rounded-xl hover:bg-white hover:-translate-y-0.5 transition-all duration-200"
             >
               Go to Login
@@ -61,7 +63,7 @@ export default function VerifyEmail() {
 
           {!isVerified && status !== "Verifying..." && (
             <button
-              onClick={() => window.location.href = '/register'}
+              onClick={() => (window.location.href = "/register")}
               className="w-full py-3 bg-white/90 text-gray-900 font-semibold rounded-xl hover:bg-white hover:-translate-y-0.5 transition-all duration-200"
             >
               Go to Register

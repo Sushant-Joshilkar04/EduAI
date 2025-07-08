@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Send, ArrowUp, X, Search, Trash2, Edit2, Check, MoreVertical } from 'lucide-react';
 import { SidebarDemo } from '@/components/Sidebar';
-import ProtectedRoute from '@/components/ProtectedRoute';
+import ProtectedRoute from '../../components/ProtectedRoute';
 import { askTutor, getChatHistory, deleteChat, updateChatName } from "@/api/chat";
 
 const ChatInterface = () => {
